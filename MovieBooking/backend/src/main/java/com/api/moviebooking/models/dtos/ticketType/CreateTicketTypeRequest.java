@@ -1,0 +1,43 @@
+package com.api.moviebooking.models.dtos.ticketType;
+
+import java.math.BigDecimal;
+
+import com.api.moviebooking.models.enums.ModifierType;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateTicketTypeRequest {
+
+    @NotBlank(message = "Ticket type code is required")
+    @Pattern(regexp = "^[a-z_]+$", message = "Ticket type code must be lowercase with underscores only")
+    private String code;
+
+    @NotBlank(message = "Label is required")
+    private String label;
+
+    @NotNull(message = "Modifier type is required")
+    private ModifierType modifierType;
+
+    @NotNull(message = "Modifier value is required")
+    @DecimalMin(value = "-100.0", message = "Modifier value must be greater than or equal to -100")
+    private BigDecimal modifierValue;
+
+    @NotNull(message = "Active status is required")
+    private Boolean active;
+
+    @NotNull(message = "Sort order is required")
+    @Min(value = 0, message = "Sort order must be non-negative")
+    private Integer sortOrder;
+}
