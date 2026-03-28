@@ -15,6 +15,10 @@ public class MovieDataResponse {
     private String description;
     private Integer duration;
     private Integer minimumAge;
+    private String imdbId;
+    private Integer releaseYear;
+    private Double imdbRating;
+    private String region;
     private String director;
     private String actors;
     private String posterUrl;

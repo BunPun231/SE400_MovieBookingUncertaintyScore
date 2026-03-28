@@ -47,6 +47,16 @@ public class Movie {
     @Column(nullable = false)
     private int minimumAge;
 
+    @Column(unique = true)
+    private String imdbId;
+
+    private Integer releaseYear;
+
+    private Double imdbRating;
+
+    @Column(columnDefinition = "TEXT")
+    private String region;
+
     private String director;
 
     @Column(columnDefinition = "TEXT")
@@ -64,6 +74,7 @@ public class Movie {
     @Column(nullable = false)
     private MovieStatus status;
 
+    @Column(columnDefinition = "TEXT")
     private String language;
 
     @OneToMany(mappedBy = "movie", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
