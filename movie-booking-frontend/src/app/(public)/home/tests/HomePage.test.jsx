@@ -4,16 +4,18 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import HomePage from "../page";
 import * as movieService from "@/api/movieService";
+import * as recommendationService from "@/api/recommendationService";
 
 vi.mock("@/api/movieService");
+vi.mock("@/api/recommendationService");
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => ({ isAuthenticated: true }),
+}));
 vi.mock("@/components/common/Navbar", () => ({
   default: () => <nav data-testid="navbar">Navbar</nav>,
 }));
 vi.mock("@/components/common/Footer", () => ({
   default: () => <footer data-testid="footer">Footer</footer>,
-}));
-vi.mock("@/components/home/HeroSlider", () => ({
-  default: () => <div data-testid="hero-slider">Hero Slider</div>,
 }));
 vi.mock("@/components/movies/MovieCarousel", () => ({
   default: ({ title, movies }) => (
@@ -38,9 +40,10 @@ vi.mock("@/components/promotions/PromoHighlight", () => ({
 describe("HomePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    recommendationService.getTopKRecommendations.mockResolvedValue([]);
   });
 
-  it("renders all main sections (Navbar, Hero, Carousels, Membership, Promo, Contact, Footer)", async () => {
+  it("renders all main sections (Navbar, Top-K, Carousels, Membership, Promo, Contact, Footer)", async () => {
     movieService.getShowingMovies.mockResolvedValue([
       { id: "m1", title: "Movie 1" },
       { id: "m2", title: "Movie 2" },
@@ -56,7 +59,7 @@ describe("HomePage", () => {
     );
 
     expect(screen.getByTestId("navbar")).toBeInTheDocument();
-    expect(screen.getByTestId("hero-slider")).toBeInTheDocument();
+  expect(screen.getByText(/Top phim dành cho bạn/i)).toBeInTheDocument();
     expect(screen.getByTestId("membership-highlight")).toBeInTheDocument();
     expect(screen.getByTestId("promo")).toBeInTheDocument();
     expect(screen.getByTestId("contact")).toBeInTheDocument();
@@ -65,6 +68,7 @@ describe("HomePage", () => {
     await waitFor(() => {
       expect(movieService.getShowingMovies).toHaveBeenCalled();
       expect(movieService.getUpcomingMovies).toHaveBeenCalled();
+      expect(recommendationService.getTopKRecommendations).toHaveBeenCalled();
     });
   });
 

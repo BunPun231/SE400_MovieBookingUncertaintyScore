@@ -22,6 +22,7 @@ function mapMovie(m) {
     language: m.language,
     duration: m.duration,
     minimumAge: m.minimumAge ?? m.minimum_age,
+    imdbRating: m.imdbRating ?? m.imdb_rating ?? null,
     releaseDate: m.releaseDate || m.release_date,
     director: m.director,
     cast: m.cast || m.actors,

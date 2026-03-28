@@ -9,6 +9,7 @@ import Footer from "@/components/common/Footer";
 import HomeButton from "@/components/shared/Buttons/HomeButton";
 import { getTicketTypes } from "@/api/ticketTypeService";
 import { getMovieById, getMovieShowtimesByDate } from "@/api/movieService";
+import { getMyRatings, upsertMovieRating } from "@/api/userRatingService";
 
 import { getSeatLayout, getSnacksByCinema } from "@/api/bookingService";
 
@@ -65,6 +66,10 @@ export default function MovieDetailPage() {
   const [showtimes, setShowtimes] = useState([]);
   const [loadingMovie, setLoadingMovie] = useState(true);
   const [loadingShowtimes, setLoadingShowtimes] = useState(true);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [ratingMessage, setRatingMessage] = useState("");
 
   // Booking state
   const [activeShowtime, setActiveShowtime] = useState(null); // { showtimeId, cinemaId, ... }
@@ -109,6 +114,62 @@ export default function MovieDetailPage() {
     };
     fetchMovie();
   }, [id]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchMyRating = async () => {
+      if (!isAuthenticated || !id) {
+        if (mounted) {
+          setUserRating(0);
+          setRatingMessage("");
+        }
+        return;
+      }
+
+      try {
+        const ratings = await getMyRatings();
+        const matched = ratings.find(
+          (row) => String(row.movieId) === String(id)
+        );
+        if (mounted) {
+          setUserRating(matched?.ratingValue || 0);
+          setRatingMessage("");
+        }
+      } catch (err) {
+        if (mounted) {
+          setUserRating(0);
+          setRatingMessage("");
+        }
+      }
+    };
+
+    fetchMyRating();
+    return () => {
+      mounted = false;
+    };
+  }, [id, isAuthenticated]);
+
+  const handleRateMovie = async (value) => {
+    if (!movie?.id && !id) return;
+
+    if (!isAuthenticated) {
+      showWarning("Vui lòng đăng nhập để đánh giá bộ phim này.");
+      return;
+    }
+
+    setRatingSubmitting(true);
+    try {
+      const result = await upsertMovieRating(movie?.id || id, value);
+      setUserRating(result?.ratingValue || value);
+      setRatingMessage("Đánh giá của bạn đã được lưu.");
+    } catch (err) {
+      const message = err?.message || "Không thể lưu đánh giá. Vui lòng thử lại.";
+      setRatingMessage(message);
+    } finally {
+      setRatingSubmitting(false);
+    }
+  };
 
   /* ===== LOAD TICKET TYPES (MỖI SUẤT CHIẾU 1 BẢNG GIÁ – DÙNG API MỚI) ===== */
   useEffect(() => {
@@ -557,7 +618,16 @@ export default function MovieDetailPage() {
         </div>
 
         {/* HERO: Poster + info */}
-        <HeroSection movie={movie} />
+        <HeroSection
+          movie={movie}
+          isAuthenticated={isAuthenticated}
+          userRating={userRating}
+          hoverRating={hoverRating}
+          onHoverRating={setHoverRating}
+          onRateMovie={handleRateMovie}
+          ratingSubmitting={ratingSubmitting}
+          ratingMessage={ratingMessage}
+        />
 
         {/* LỊCH CHIẾU */}
         <ShowtimeSection
@@ -685,7 +755,16 @@ export default function MovieDetailPage() {
 
 /* ========= SUB COMPONENTS ========= */
 
-function HeroSection({ movie }) {
+function HeroSection({
+  movie,
+  isAuthenticated,
+  userRating,
+  hoverRating,
+  onHoverRating,
+  onRateMovie,
+  ratingSubmitting,
+  ratingMessage,
+}) {
   return (
     <section className="max-w-6xl mx-auto px-4 pt-6 pb-10 flex flex-col lg:flex-row gap-8 lg:gap-10 items-center lg:items-start">
       {/* Poster, tỷ lệ 2:3 */}
@@ -739,6 +818,11 @@ function HeroSection({ movie }) {
               {movie.language}
             </span>
           )}
+          {Number.isFinite(Number(movie?.imdbRating)) && (
+            <span className="px-3 py-1 rounded-xl bg-[#ffe70022] border border-[#ffe70055] text-[#ffe700] font-semibold">
+              IMDb: {Number(movie.imdbRating).toFixed(1)}/10
+            </span>
+          )}
           {movie?.releaseDate && (
             <span className="px-3 py-1 rounded-xl bg-white/5 border border-white/10">
               Khởi chiếu: {movie.releaseDate}
@@ -752,6 +836,48 @@ function HeroSection({ movie }) {
             {movie.description}
           </p>
         )}
+
+        <div className="mt-5 rounded-2xl border border-white/12 bg-white/5 p-4">
+          <p className="text-white/70 text-[11px] uppercase tracking-[0.2em] mb-2">
+            Đánh giá của bạn
+          </p>
+
+          <div className="flex items-center gap-1.5">
+            {[1, 2, 3, 4, 5].map((star) => {
+              const active = star <= (hoverRating || userRating || 0);
+              return (
+                <button
+                  key={star}
+                  type="button"
+                  onMouseEnter={() => onHoverRating(star)}
+                  onMouseLeave={() => onHoverRating(0)}
+                  onClick={() => onRateMovie(star)}
+                  disabled={ratingSubmitting}
+                  className={`text-2xl leading-none transition-all ${
+                    active
+                      ? "text-[#ffe700] drop-shadow-[0_0_10px_rgba(255,231,0,0.7)]"
+                      : "text-white/25"
+                  } ${ratingSubmitting ? "cursor-not-allowed opacity-70" : "hover:scale-110"}`}
+                  aria-label={`Đánh giá ${star} sao`}
+                >
+                  ★
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mt-2 text-xs text-white/70">
+            {isAuthenticated
+              ? userRating > 0
+                ? `Bạn đã đánh giá ${userRating}/5 sao.`
+                : "Chọn số sao để gửi đánh giá cho phim này."
+              : "Đăng nhập để đánh giá phim theo thang điểm 5 sao."}
+          </p>
+
+          {ratingMessage ? (
+            <p className="mt-1 text-xs text-[#43e1ff]">{ratingMessage}</p>
+          ) : null}
+        </div>
 
         {/* Director / Cast cards */}
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-[12px] sm:text-[13px] text-[#e5e7ff]/90">
