@@ -1,6 +1,7 @@
 package com.api.moviebooking.controllers;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.api.moviebooking.models.dtos.movie.AddMovieRequest;
 import com.api.moviebooking.models.dtos.movie.MovieDataResponse;
 import com.api.moviebooking.models.dtos.movie.UpdateMovieRequest;
+import com.api.moviebooking.services.MovieBulkImportService;
 import com.api.moviebooking.services.MovieService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 public class MovieController {
 
     private final MovieService movieService;
+    private final MovieBulkImportService movieBulkImportService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -124,5 +127,21 @@ public class MovieController {
         List<com.api.moviebooking.models.dtos.movie.CinemaShowtimesResponse> response = 
                 movieService.getMovieShowtimesByDate(movieId, queryDate);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/bulk-import")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerToken")
+    @Operation(summary = "Trigger background bulk import movies by genre from IMDb")
+    public ResponseEntity<Map<String, Object>> bulkImportByGenre(
+            @RequestParam String genre,
+            @RequestParam(defaultValue = "20") int limit) {
+
+        movieBulkImportService.importMoviesByGenre(genre, limit);
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
+                "message", "Bulk import started in background",
+                "genre", genre,
+                "limit", limit));
     }
 }

@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 
 export default function SocialLogin() {
   const handleGoogleLogin = () => {
-    const base = import.meta.env.VITE_API_URL || "http://localhost:8080";
+    const base = import.meta.env.VITE_API_URL || "http://localhost:8081";
     window.location.href = `${base}/api/auth/google/login`;
   };
 

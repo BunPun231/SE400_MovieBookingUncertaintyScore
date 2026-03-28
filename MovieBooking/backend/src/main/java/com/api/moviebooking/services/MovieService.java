@@ -95,6 +95,18 @@ public class MovieService {
         if (request.getMinimumAge() != null) {
             movie.setMinimumAge(request.getMinimumAge());
         }
+        if (request.getImdbId() != null) {
+            movie.setImdbId(request.getImdbId().trim());
+        }
+        if (request.getReleaseYear() != null) {
+            movie.setReleaseYear(request.getReleaseYear());
+        }
+        if (request.getImdbRating() != null) {
+            movie.setImdbRating(request.getImdbRating());
+        }
+        if (request.getRegion() != null) {
+            movie.setRegion(request.getRegion());
+        }
         if (request.getDirector() != null) {
             movie.setDirector(request.getDirector());
         }

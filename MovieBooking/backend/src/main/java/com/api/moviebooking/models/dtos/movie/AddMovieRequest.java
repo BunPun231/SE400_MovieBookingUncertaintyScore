@@ -4,6 +4,8 @@ import com.api.moviebooking.helpers.annotations.EnumValidator;
 import com.api.moviebooking.models.enums.MovieStatus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -30,6 +32,17 @@ public class AddMovieRequest {
     @NotNull(message = "Minimum age is required")
     @Min(value = 0, message = "Minimum age must be at least 0")
     private Integer minimumAge;
+
+    private String imdbId;
+
+    @Min(value = 1888, message = "Release year must be valid")
+    private Integer releaseYear;
+
+    @DecimalMin(value = "0.0", message = "IMDb rating must be >= 0")
+    @DecimalMax(value = "10.0", message = "IMDb rating must be <= 10")
+    private Double imdbRating;
+
+    private String region;
 
     @NotBlank(message = "Director is required")
     private String director;
