@@ -60,7 +60,7 @@ export default function AdminTopbar() {
             <div className="relative h-9 w-9 rounded-2xl overflow-hidden bg-gradient-to-br from-violet-500 via-fuchsia-500 to-emerald-400 p-[2px] shadow-[0_0_25px_rgba(168,85,247,0.65)] group-hover:scale-105 transition-transform">
               <div className="h-full w-full rounded-2xl bg-[#0b001f] overflow-hidden flex items-center justify-center">
                 <img
-                  src="/public/movies/—Pngtree—film festival logo popcorn and_4686389.png" 
+                  src="/movies/—Pngtree—film festival logo popcorn and_4686389.png" 
                   alt="CineVerse"
                   className="h-full w-full object-cover"
                   onError={(e) => {
