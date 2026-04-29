@@ -6,6 +6,28 @@ import { uploadPoster } from "@/api/cloudinaryService";
 import { toast } from "react-toastify";
 
 const STATUS_OPTIONS = ["SHOWING", "UPCOMING"];
+const GENRE_SUGGESTIONS = [
+  "Action",
+  "Adventure",
+  "Animation",
+  "Biography",
+  "Comedy",
+  "Crime",
+  "Documentary",
+  "Drama",
+  "Family",
+  "Fantasy",
+  "History",
+  "Horror",
+  "Music",
+  "Mystery",
+  "Romance",
+  "Sci-Fi",
+  "Sport",
+  "Thriller",
+  "War",
+  "Western",
+];
 
 const EMPTY_FORM = {
   title: "",
@@ -39,6 +61,10 @@ export default function AdminMoviesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMovie, setEditingMovie] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [showMassImportModal, setShowMassImportModal] = useState(false);
+  const [importGenres, setImportGenres] = useState([]);
+  const [importLimit, setImportLimit] = useState(20);
+  const [isMassImporting, setIsMassImporting] = useState(false);
 
   // Warning modal state (Seats-style)
   const [warning, setWarning] = useState({
@@ -131,6 +157,40 @@ setSuccess(null);
   const handleCloseModal = () => {
     if (saving) return;
     setIsModalOpen(false);
+  };
+
+  const handleCloseMassImportModal = () => {
+    if (isMassImporting) return;
+    setShowMassImportModal(false);
+    setImportGenres([]);
+    setImportLimit(20);
+  };
+
+  const handleMassImport = async () => {
+    if (!importGenres.length) {
+      toast.error("Please select at least one genre.");
+      return;
+    }
+
+    const normalizedLimit = Math.min(20, Math.max(1, Number(importLimit) || 20));
+    const genreQuery = importGenres.join(",");
+
+    try {
+      setIsMassImporting(true);
+      await AdminMovieService.massImportByGenre(genreQuery, normalizedLimit);
+      toast.success(
+        `Triggered import up to ${normalizedLimit} movies for genres: ${genreQuery}.`
+      );
+      setShowMassImportModal(false);
+      setImportGenres([]);
+      setImportLimit(20);
+    } catch (err) {
+      console.error("Mass import error:", err);
+      const detail = err?.data?.message || err?.message || "Failed to trigger import.";
+      toast.error(detail);
+    } finally {
+      setIsMassImporting(false);
+    }
   };
 
   const handleFormChange = (field) => (e) => {
@@ -324,7 +384,7 @@ toast.error(msg);
   return (
     <div
       className={`space-y-8 lg:space-y-10 ${
-        isModalOpen ? "h-screen overflow-hidden" : ""
+        isModalOpen || showMassImportModal ? "h-screen overflow-hidden" : ""
       }`}
     >
       {/* Shared warning modal */}
@@ -420,6 +480,20 @@ toast.error(msg);
               className="inline-flex items-center justify-center rounded-2xl px-4 py-2.5 text-xs font-semibold tracking-[0.16em] uppercase bg-white/5 border border-white/20 text-white hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
             >
               {loading ? "Đang tải..." : "Làm mới"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowMassImportModal(true)}
+              className="inline-flex items-center gap-2 justify-center rounded-2xl px-4 py-2.5 text-xs font-semibold tracking-[0.16em] uppercase bg-emerald-600/80 border border-emerald-400/50 text-white hover:bg-emerald-500/90 transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              Mass Import
             </button>
 
             <button
@@ -598,6 +672,25 @@ toast.error(msg);
       </section>
 
       {/* Modal Add / Edit */}
+      {showMassImportModal && (
+        <MassImportModal
+          genres={importGenres}
+          limit={importLimit}
+          onGenresChange={setImportGenres}
+          onLimitChange={(e) => {
+            const raw = Number(e.target.value);
+            if (!Number.isFinite(raw)) {
+              setImportLimit(20);
+              return;
+            }
+            setImportLimit(Math.min(20, Math.max(1, raw)));
+          }}
+          onClose={handleCloseMassImportModal}
+          onConfirm={handleMassImport}
+          isImporting={isMassImporting}
+        />
+      )}
+
       {isModalOpen && (
         <MovieModal
           isOpen={isModalOpen}
@@ -938,6 +1031,242 @@ function MovieModal({
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MassImportModal({
+  genres,
+  limit,
+  onGenresChange,
+  onLimitChange,
+  onClose,
+  onConfirm,
+  isImporting,
+}) {
+  const [genreInput, setGenreInput] = useState("");
+  const [isGenreMenuOpen, setIsGenreMenuOpen] = useState(false);
+  const [activeGenreIndex, setActiveGenreIndex] = useState(0);
+
+  const filteredGenres = useMemo(() => {
+    const q = genreInput.trim().toLowerCase();
+    const selected = new Set((genres || []).map((g) => g.toLowerCase()));
+    const source = GENRE_SUGGESTIONS.filter((item) => !selected.has(item.toLowerCase()));
+    if (!q) return source;
+    return source.filter((item) => item.toLowerCase().includes(q));
+  }, [genreInput, genres]);
+
+  useEffect(() => {
+    setActiveGenreIndex(0);
+  }, [genreInput]);
+
+  const selectGenre = (value) => {
+    const normalized = value.trim();
+    if (!normalized) return;
+    const exists = (genres || []).some(
+      (g) => g.toLowerCase() === normalized.toLowerCase()
+    );
+    if (!exists) onGenresChange([...(genres || []), normalized]);
+    setGenreInput("");
+    setIsGenreMenuOpen(true);
+  };
+
+  const removeGenre = (value) => {
+    onGenresChange((genres || []).filter((g) => g !== value));
+  };
+
+  const handleGenreKeyDown = (e) => {
+    if (e.key === "Backspace" && !genreInput && genres?.length) {
+      e.preventDefault();
+      removeGenre(genres[genres.length - 1]);
+      return;
+    }
+
+    if (!isGenreMenuOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      setIsGenreMenuOpen(true);
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      if (!filteredGenres.length) return;
+      e.preventDefault();
+      setActiveGenreIndex((prev) => (prev + 1) % filteredGenres.length);
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
+      if (!filteredGenres.length) return;
+      e.preventDefault();
+      setActiveGenreIndex(
+        (prev) => (prev - 1 + filteredGenres.length) % filteredGenres.length
+      );
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (isGenreMenuOpen && filteredGenres.length) {
+        selectGenre(filteredGenres[activeGenreIndex]);
+        return;
+      }
+      if (genreInput.trim()) selectGenre(genreInput);
+      return;
+    }
+
+    if (e.key === "Escape") {
+      setIsGenreMenuOpen(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-8 bg-black/70 backdrop-blur-xl">
+      <div className="relative w-full max-w-md rounded-3xl overflow-hidden bg-gradient-to-br from-[#160033]/95 via-[#080017] to-black border border-white/15 shadow-[0_0_60px_rgba(16,185,129,0.35)]">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/15 via-transparent to-cyan-500/20 pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400" />
+
+        <div className="relative p-6 md:p-8">
+          <div className="flex items-start justify-between gap-4 mb-6">
+            <div>
+              <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-emerald-400/70 mb-1">
+                ADMIN MOVIES
+              </p>
+              <h2 className="text-xl font-black tracking-[0.14em] uppercase bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300 bg-clip-text text-transparent">
+                Mass Import from IMDb
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isImporting}
+              className="rounded-full bg-white/5 hover:bg-white/10 border border-white/20 w-8 h-8 flex items-center justify-center text-white/70 text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              x
+            </button>
+          </div>
+
+          <div className="space-y-5">
+            <p className="text-xs text-white/50 leading-relaxed">
+              Select one or many genres. You can choose suggestions or type custom genres.
+            </p>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-white/60 mb-2 uppercase tracking-[0.18em]">
+                Genres *
+              </label>
+              <div className="relative">
+                <div className="w-full rounded-2xl bg-white/5 border border-white/15 px-3 py-2.5 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/40 transition-all">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(genres || []).map((item) => (
+                      <span
+                        key={item}
+                        className="inline-flex items-center gap-2 rounded-full border border-white px-2.5 py-1 text-xs text-white"
+                      >
+                        {item}
+                        <button
+                          type="button"
+                          onClick={() => removeGenre(item)}
+                          disabled={isImporting}
+                          className="text-white/80 hover:text-white disabled:opacity-50"
+                        >
+                          x
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      type="text"
+                      value={genreInput}
+                      role="combobox"
+                      aria-expanded={isGenreMenuOpen}
+                      aria-controls="mass-import-genre-listbox"
+                      aria-activedescendant={
+                        isGenreMenuOpen && filteredGenres[activeGenreIndex]
+                          ? `mass-import-genre-${activeGenreIndex}`
+                          : undefined
+                      }
+                      onChange={(e) => {
+                        setGenreInput(e.target.value);
+                        setIsGenreMenuOpen(true);
+                      }}
+                      onFocus={() => setIsGenreMenuOpen(true)}
+                      onKeyDown={handleGenreKeyDown}
+                      onBlur={() => setTimeout(() => setIsGenreMenuOpen(false), 100)}
+                      disabled={isImporting}
+                      placeholder="Type or pick multiple genres..."
+                      className="min-w-[180px] flex-1 bg-transparent px-1 py-1 text-sm text-white placeholder-white/30 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                {isGenreMenuOpen && filteredGenres.length > 0 && !isImporting && (
+                  <div
+                    id="mass-import-genre-listbox"
+                    role="listbox"
+                    className="absolute z-20 mt-2 max-h-52 w-full overflow-y-auto rounded-2xl border border-white/15 bg-[#100322] shadow-2xl"
+                  >
+                    {filteredGenres.map((item, idx) => {
+                      const isActive = idx === activeGenreIndex;
+                      return (
+                        <button
+                          key={item}
+                          id={`mass-import-genre-${idx}`}
+                          role="option"
+                          aria-selected={isActive}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => selectGenre(item)}
+                          className={`w-full px-4 py-2.5 text-left text-sm transition-all ${
+                            isActive
+                              ? "bg-emerald-500/20 text-emerald-200"
+                              : "text-white/85 hover:bg-white/10"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-white/60 mb-2 uppercase tracking-[0.18em]">
+                Max items <span className="text-white/30 normal-case">(1-20)</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={limit}
+                onChange={onLimitChange}
+                disabled={isImporting}
+                className="w-full rounded-2xl bg-white/5 border border-white/15 px-4 py-3 text-sm text-white placeholder-white/30
+                  focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/40 focus:bg-white/10 transition-all
+                  disabled:opacity-60 disabled:cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 mt-7">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isImporting}
+              className="flex-1 rounded-2xl border border-white/20 bg-white/5 py-3.5 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={isImporting || !genres?.length}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 py-3.5 text-sm font-black text-black shadow-xl shadow-emerald-500/40 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+            >
+              {isImporting ? "Running..." : "Confirm Import"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
