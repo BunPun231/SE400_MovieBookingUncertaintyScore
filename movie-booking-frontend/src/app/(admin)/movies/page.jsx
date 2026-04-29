@@ -91,7 +91,7 @@ export default function AdminMoviesPage() {
   const fetchMovies = async () => {
     try {
       setLoading(true);
-setSuccess(null);
+      setSuccess(null);
 
       // Gọi 2 API: SHOWING + UPCOMING rồi gộp lại
       const [showingRes, upcomingRes] = await Promise.all([
@@ -117,7 +117,7 @@ setSuccess(null);
     } catch (err) {
       console.error("Fetch movies error:", err);
       const msg = err?.message || "Không tải được danh sách phim.";
-toast.error(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -130,7 +130,7 @@ toast.error(msg);
   const handleOpenCreateModal = () => {
     setEditingMovie(null);
     setForm(EMPTY_FORM);
-setSuccess(null);
+    setSuccess(null);
     setIsModalOpen(true);
   };
 
@@ -150,7 +150,7 @@ setSuccess(null);
       status: movie?.status || "SHOWING",
       language: movie?.language || "",
     });
-setSuccess(null);
+    setSuccess(null);
     setIsModalOpen(true);
   };
 
@@ -168,7 +168,7 @@ setSuccess(null);
 
   const handleMassImport = async () => {
     if (!importGenres.length) {
-      toast.error("Please select at least one genre.");
+      toast.error("Vui lòng chọn ít nhất 1 thể loại.");
       return;
     }
 
@@ -179,14 +179,14 @@ setSuccess(null);
       setIsMassImporting(true);
       await AdminMovieService.massImportByGenre(genreQuery, normalizedLimit);
       toast.success(
-        `Triggered import up to ${normalizedLimit} movies for genres: ${genreQuery}.`
+        `Đã thêm ${normalizedLimit} phim cho thể loại: ${genreQuery}.`
       );
       setShowMassImportModal(false);
       setImportGenres([]);
       setImportLimit(20);
     } catch (err) {
-      console.error("Mass import error:", err);
-      const detail = err?.data?.message || err?.message || "Failed to trigger import.";
+      console.error("Lỗi mass import:", err);
+      const detail = err?.data?.message || err?.message || "Lỗi mass import.";
       toast.error(detail);
     } finally {
       setIsMassImporting(false);
@@ -199,37 +199,37 @@ setSuccess(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-setSuccess(null);
+    setSuccess(null);
 
     // ===== Validate + toast like Promotions page =====
     if (!form.genre.trim()) {
       const msg = "Vui lòng nhập thể loại phim.";
-toast.error(msg);
+      toast.error(msg);
       return;
     }
     if (!form.description.trim()) {
       const msg = "Vui lòng nhập mô tả phim.";
-toast.error(msg);
+      toast.error(msg);
       return;
     }
     if (!form.director.trim()) {
       const msg = "Vui lòng nhập tên đạo diễn.";
-toast.error(msg);
+      toast.error(msg);
       return;
     }
     if (!form.actors.trim()) {
       const msg = "Vui lòng nhập danh sách diễn viên.";
-toast.error(msg);
+      toast.error(msg);
       return;
     }
     if (!form.trailerUrl.trim()) {
       const msg = "Vui lòng nhập Trailer URL.";
-toast.error(msg);
+      toast.error(msg);
       return;
     }
     if (!form.language.trim()) {
       const msg = "Vui lòng nhập ngôn ngữ.";
-toast.error(msg);
+      toast.error(msg);
       return;
     }
 
@@ -284,7 +284,7 @@ toast.error(msg);
     } catch (err) {
       console.error("Save movie error:", err);
       const msg = err?.message || "Lưu thông tin phim thất bại.";
-toast.error(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -294,7 +294,7 @@ toast.error(msg);
     const confirmDelete = async () => {
       try {
         setDeletingId(movieId);
-setSuccess(null);
+        setSuccess(null);
 
         await AdminMovieService.deleteMovie?.(movieId);
 
@@ -305,7 +305,7 @@ setSuccess(null);
       } catch (err) {
         console.error("Delete movie error:", err);
         const msg = err?.message || "Xóa phim thất bại.";
-toast.error(msg);
+        toast.error(msg);
       } finally {
         setDeletingId(null);
         closeWarning();
@@ -325,9 +325,8 @@ toast.error(msg);
     return movies.filter((m) => {
       const q = search.trim().toLowerCase();
       if (q) {
-        const haystack = `${m.title || ""} ${m.genre || ""} ${
-          m.language || ""
-        }`.toLowerCase();
+        const haystack = `${m.title || ""} ${m.genre || ""} ${m.language || ""
+          }`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
 
@@ -374,7 +373,7 @@ toast.error(msg);
       console.error("Upload poster error:", err);
       const msg = err?.message || "Upload poster thất bại.";
       toast.error(msg);
-} finally {
+    } finally {
       setUploadingPoster(false);
     }
   };
@@ -383,9 +382,8 @@ toast.error(msg);
 
   return (
     <div
-      className={`space-y-8 lg:space-y-10 ${
-        isModalOpen || showMassImportModal ? "h-screen overflow-hidden" : ""
-      }`}
+      className={`space-y-8 lg:space-y-10 ${isModalOpen || showMassImportModal ? "h-screen overflow-hidden" : ""
+        }`}
     >
       {/* Shared warning modal */}
       <WarningModal
@@ -1026,8 +1024,8 @@ function MovieModal({
                     ? "Đang lưu..."
                     : "Đang tạo..."
                   : isEdit
-                  ? "Lưu thay đổi"
-                  : "Tạo phim"}
+                    ? "Lưu thay đổi"
+                    : "Tạo phim"}
               </button>
             </div>
           </form>
@@ -1133,7 +1131,7 @@ function MassImportModal({
                 ADMIN MOVIES
               </p>
               <h2 className="text-xl font-black tracking-[0.14em] uppercase bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300 bg-clip-text text-transparent">
-                Mass Import from IMDb
+                Mass Import từ IMDb
               </h2>
             </div>
             <button
@@ -1148,12 +1146,12 @@ function MassImportModal({
 
           <div className="space-y-5">
             <p className="text-xs text-white/50 leading-relaxed">
-              Select one or many genres. You can choose suggestions or type custom genres.
+              Chọn một hoặc nhiều thể loại. Bạn có thể chọn gợi ý hoặc tự nhập thể loại.
             </p>
 
             <div>
               <label className="block text-[11px] font-semibold text-white/60 mb-2 uppercase tracking-[0.18em]">
-                Genres *
+                Thể loại *
               </label>
               <div className="relative">
                 <div className="w-full rounded-2xl bg-white/5 border border-white/15 px-3 py-2.5 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/40 transition-all">
@@ -1193,7 +1191,7 @@ function MassImportModal({
                       onKeyDown={handleGenreKeyDown}
                       onBlur={() => setTimeout(() => setIsGenreMenuOpen(false), 100)}
                       disabled={isImporting}
-                      placeholder="Type or pick multiple genres..."
+                      placeholder="Gõ hoặc chọn thể loại..."
                       className="min-w-[180px] flex-1 bg-transparent px-1 py-1 text-sm text-white placeholder-white/30 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
@@ -1216,11 +1214,10 @@ function MassImportModal({
                           type="button"
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => selectGenre(item)}
-                          className={`w-full px-4 py-2.5 text-left text-sm transition-all ${
-                            isActive
-                              ? "bg-emerald-500/20 text-emerald-200"
-                              : "text-white/85 hover:bg-white/10"
-                          }`}
+                          className={`w-full px-4 py-2.5 text-left text-sm transition-all ${isActive
+                            ? "bg-emerald-500/20 text-emerald-200"
+                            : "text-white/85 hover:bg-white/10"
+                            }`}
                         >
                           {item}
                         </button>
@@ -1256,7 +1253,7 @@ function MassImportModal({
               disabled={isImporting}
               className="flex-1 rounded-2xl border border-white/20 bg-white/5 py-3.5 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="button"
@@ -1264,7 +1261,7 @@ function MassImportModal({
               disabled={isImporting || !genres?.length}
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 py-3.5 text-sm font-black text-black shadow-xl shadow-emerald-500/40 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
             >
-              {isImporting ? "Running..." : "Confirm Import"}
+              {isImporting ? "Đang chạy..." : "Xác nhận"}
             </button>
           </div>
         </div>
