@@ -1,4 +1,4 @@
-// src/app/(admin)/movies/page.jsx
+﻿// src/app/(admin)/movies/page.jsx
 import { useEffect, useMemo, useState } from "react";
 import WarningModal from "@/components/shared/WarningModal";
 import { AdminMovieService } from "@/api/adminservice";
@@ -173,13 +173,17 @@ export default function AdminMoviesPage() {
     }
 
     const normalizedLimit = Math.min(20, Math.max(1, Number(importLimit) || 20));
-    const genreQuery = importGenres.join(",");
+    const genreList = importGenres.join(", ");
 
     try {
       setIsMassImporting(true);
-      await AdminMovieService.massImportByGenre(genreQuery, normalizedLimit);
+      await Promise.all(
+        importGenres.map((genre) =>
+          AdminMovieService.massImportByGenre(genre, normalizedLimit)
+        )
+      );
       toast.success(
-        `Đã thêm ${normalizedLimit} phim cho thể loại: ${genreQuery}.`
+        `Đã gửi yêu cầu import ${normalizedLimit} phim cho mỗi thể loại: ${genreList}`
       );
       setShowMassImportModal(false);
       setImportGenres([]);
@@ -1269,3 +1273,4 @@ function MassImportModal({
     </div>
   );
 }
+

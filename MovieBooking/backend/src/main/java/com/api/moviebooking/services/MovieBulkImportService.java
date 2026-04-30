@@ -1,7 +1,7 @@
 package com.api.moviebooking.services;
 
 import java.net.SocketTimeoutException;
-import java.time.Instant;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -33,6 +34,11 @@ public class MovieBulkImportService {
 
     private static final int DEFAULT_LIMIT = 20;
     private static final int MAX_LIMIT = 100;
+    private static final int FETCH_PAGE_SIZE = 50;
+    private static final int YEAR_SLICE_SIZE = 5;
+    private static final int MAX_YEAR_SLICES = 20;
+    private static final int MAX_STALE_SLICES = 8;
+    private static final int MIN_RELEASE_YEAR = 1920;
 
     private final RestTemplate restTemplate;
     private final ImdbSyncService imdbSyncService;
@@ -51,42 +57,112 @@ public class MovieBulkImportService {
         }
 
         int normalizedLimit = normalizeLimit(limit);
-        List<String> imdbIds = fetchImdbIdsByGenre(genre.trim(), normalizedLimit);
-        int total = imdbIds.size();
+        int importedCount = 0;
+        int staleSlices = 0;
+        int currentYear = Year.now().getValue() + 1;
+        Set<String> processedImdbIds = new LinkedHashSet<>();
 
-        log.info("Bulk import started. genre={}, requestedLimit={}, fetchedIds={}, delayMs={}, startedAt={}",
-                genre, normalizedLimit, total, delayMs, Instant.now());
+        log.info("Bulk import started. genre={}, requestedLimit={}", genre, normalizedLimit);
 
-        for (int index = 0; index < total; index++) {
-            String imdbId = imdbIds.get(index);
-            int progress = index + 1;
-
-            log.info("Dang nhap phim thu {}/{}... imdbId={}", progress, total, imdbId);
-
-            try {
-                if (movieRepo.existsByImdbId(imdbId)) {
-                    log.info("Skip imdbId={} because it already exists", imdbId);
-                } else {
-                    Movie importedMovie = imdbSyncService.syncMovieByImdbId(imdbId);
-                    log.info("Imported movie imdbId={} movieId={} title={}",
-                            importedMovie.getImdbId(), importedMovie.getId(), importedMovie.getTitle());
-                }
-            } catch (Exception exception) {
-                log.warn("Failed to import imdbId={}: {}", imdbId, exception.getMessage());
+        for (int sliceIndex = 0; importedCount < normalizedLimit && sliceIndex < MAX_YEAR_SLICES; sliceIndex++) {
+            int sliceEndYear = currentYear - (sliceIndex * YEAR_SLICE_SIZE);
+            int sliceStartYear = Math.max(MIN_RELEASE_YEAR, sliceEndYear - YEAR_SLICE_SIZE + 1);
+            if (sliceEndYear < MIN_RELEASE_YEAR) {
+                break;
             }
 
-            applyRateLimitDelay();
+            List<String> imdbIds = fetchImdbIdsByGenre(genre.trim(), FETCH_PAGE_SIZE, sliceStartYear, sliceEndYear);
+
+            if (imdbIds.isEmpty()) {
+                log.info("No movies found for genre={} in year range [{}-{}]", genre, sliceStartYear, sliceEndYear);
+                staleSlices++;
+                if (staleSlices >= MAX_STALE_SLICES) {
+                    log.info("Stop bulk import early due to stale slices. genre={}, staleSlices={}", genre, staleSlices);
+                    break;
+                }
+                continue;
+            }
+
+            int importedBeforeSlice = importedCount;
+            int uniqueCandidatesThisSlice = 0;
+
+            for (String imdbId : imdbIds) {
+                if (importedCount >= normalizedLimit) {
+                    break;
+                }
+
+                if (imdbId == null || imdbId.isBlank()) {
+                    continue;
+                }
+
+                String normalizedImdbId = imdbId.trim();
+                if (!processedImdbIds.add(normalizedImdbId)) {
+                    continue;
+                }
+
+                uniqueCandidatesThisSlice++;
+                boolean imported = importIfMissing(normalizedImdbId, importedCount + 1, normalizedLimit);
+                if (imported) {
+                    importedCount++;
+                }
+            }
+
+            if (importedCount == importedBeforeSlice) {
+                staleSlices++;
+                log.info(
+                        "No new movie imported for genre={} in year range [{}-{}] (uniqueCandidates={}, staleSlices={})",
+                        genre,
+                        sliceStartYear,
+                        sliceEndYear,
+                        uniqueCandidatesThisSlice,
+                        staleSlices);
+            } else {
+                staleSlices = 0;
+            }
+
+            if (staleSlices >= MAX_STALE_SLICES) {
+                log.info("Stop bulk import early due to stale slices. genre={}, staleSlices={}", genre, staleSlices);
+                break;
+            }
         }
 
-        log.info("Bulk import completed. genre={}, totalProcessed={}, finishedAt={}", genre, total, Instant.now());
+        log.info("Bulk import completed. genre={}, totalImported={}, requestedLimit={}, processedUniqueIds={}",
+                genre,
+                importedCount,
+                normalizedLimit,
+                processedImdbIds.size());
         return CompletableFuture.completedFuture(null);
     }
 
-    private List<String> fetchImdbIdsByGenre(String genre, int limit) {
+    private boolean importIfMissing(String imdbId, int ordinal, int limit) {
+        if (movieRepo.existsByImdbId(imdbId)) {
+            log.info("Skip imdbId={} because it already exists", imdbId);
+            return false;
+        }
+
+        try {
+            Movie importedMovie = imdbSyncService.syncMovieByImdbId(imdbId);
+            log.info("Imported {}/{} - imdbId={}", ordinal, limit, importedMovie.getImdbId());
+            return true;
+        } catch (DataIntegrityViolationException dataIntegrityViolationException) {
+            // Concurrent imports by different genres can race on the same imdbId.
+            log.info("Skip imdbId={} because it was inserted concurrently", imdbId);
+            return false;
+        } catch (Exception exception) {
+            log.warn("Failed to import imdbId={}: {}", imdbId, exception.getMessage());
+            return false;
+        } finally {
+            applyRateLimitDelay();
+        }
+    }
+
+    private List<String> fetchImdbIdsByGenre(String genre, int limit, int startYear, int endYear) {
         UriComponentsBuilder uriBuilder = UriComponentsBuilder
                 .fromHttpUrl(imdbApiBaseUrl + "/titles")
                 .queryParam("genre", genre)
-                .queryParam("limit", limit);
+                .queryParam("limit", limit)
+                .queryParam("startYear", startYear)
+                .queryParam("endYear", endYear);
 
         try {
             ResponseEntity<JsonNode> response = restTemplate.getForEntity(uriBuilder.build(true).toUri(), JsonNode.class);
