@@ -64,6 +64,20 @@ export async function filterMoviesByGenre(genre) {
   return res.data || res;
 }
 
+/**
+ * Kích hoạt bulk import phim từ IMDb theo thể loại (chạy async nền trên backend).
+ * Backend trả về 202 Accepted ngay lập tức, quá trình import diễn ra ở background.
+ * @param {string} genre - Thể loại phim (ví dụ: "Action", "Drama")
+ * @param {number} limit - Số phim tối đa cần import (1–100, mặc định 20)
+ */
+export async function massImportByGenre(genre, limit = 20) {
+  const res = await apiFetch(
+    `/movies/bulk-import${buildQuery({ genre, limit })}`,
+    { method: "POST" }
+  );
+  return res?.data || res;
+}
+
 /* ===================== SHOWTIMES ===================== */
 
 export async function createShowtime(payload) {
