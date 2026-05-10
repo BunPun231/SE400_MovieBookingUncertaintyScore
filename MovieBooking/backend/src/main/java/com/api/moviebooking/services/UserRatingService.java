@@ -17,6 +17,8 @@ import com.api.moviebooking.repositories.UserRatingRepository;
 import com.api.moviebooking.repositories.UserRepo;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -61,6 +63,12 @@ public class UserRatingService {
                 .sorted(Comparator.comparing(UserRating::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(this::toUserRatingDTO)
                 .toList();
+    }
+
+    public Page<UserRatingDTO> getUserRatingsPage(UUID userId, int page, int size) {
+        PageRequest pr = PageRequest.of(Math.max(0, page), Math.max(1, size));
+        return userRatingRepository.findByUserIdOrderByCreatedAtDesc(userId, pr)
+                .map(this::toUserRatingDTO);
     }
 
     @Transactional

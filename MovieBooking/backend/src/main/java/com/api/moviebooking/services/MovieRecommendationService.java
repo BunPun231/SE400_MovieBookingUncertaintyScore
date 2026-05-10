@@ -92,12 +92,26 @@ public class MovieRecommendationService {
         return candidates.parallelStream()
                 .map(movie -> {
                     RatingPredictionDTO prediction = predictRatingInternal(userId, movie, profile, algorithmParameters);
+                    UUID nearestId = prediction.getNearestMovieId();
+                    String nearestTitle = null;
+                    String nearestPoster = null;
+                    if (nearestId != null) {
+                        var opt = movieRepo.findById(nearestId);
+                        if (opt.isPresent()) {
+                            var nm = opt.get();
+                            nearestTitle = nm.getTitle();
+                            nearestPoster = nm.getPosterUrl();
+                        }
+                    }
                     return MovieRecommendationDTO.builder()
                             .movieId(movie.getId())
                             .title(movie.getTitle())
                             .posterUrl(movie.getPosterUrl())
                             .predictedRating(prediction.getFinalPrediction())
                             .uncertaintyScore(prediction.getUncertaintyScore())
+                            .nearestMovieId(nearestId)
+                            .nearestMovieTitle(nearestTitle)
+                            .nearestMoviePosterUrl(nearestPoster)
                             .build();
                 })
                 // Sort by predicted rating (descending) and then by uncertainty score (ascending), and take the top K.

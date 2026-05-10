@@ -8,6 +8,8 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import com.api.moviebooking.models.entities.UserRating;
 
@@ -27,4 +29,7 @@ public interface UserRatingRepository extends JpaRepository<UserRating, UUID> {
 
     @Query("SELECT ur FROM UserRating ur JOIN FETCH ur.movie WHERE ur.user.id = :userId")
     List<UserRating> findByUserIdWithMovie(@Param("userId") UUID userId);
+
+    // pageable version for listing with pagination
+    Page<UserRating> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 }

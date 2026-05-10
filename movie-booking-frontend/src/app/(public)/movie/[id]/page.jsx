@@ -818,6 +818,16 @@ function HeroSection({
               {movie.language}
             </span>
           )}
+          {movie?.region && (
+            <span className="px-3 py-1 rounded-xl bg-white/5 border border-white/10">
+              {movie.region}
+            </span>
+          )}
+          {movie?.releaseYear && (
+            <span className="px-3 py-1 rounded-xl bg-white/5 border border-white/10">
+              Năm: {movie.releaseYear}
+            </span>
+          )}
           {Number.isFinite(Number(movie?.imdbRating)) && (
             <span className="px-3 py-1 rounded-xl bg-[#ffe70022] border border-[#ffe70055] text-[#ffe700] font-semibold">
               IMDb: {Number(movie.imdbRating).toFixed(1)}/10

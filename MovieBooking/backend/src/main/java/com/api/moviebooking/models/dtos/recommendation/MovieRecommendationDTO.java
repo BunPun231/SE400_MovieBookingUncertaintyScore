@@ -15,4 +15,8 @@ public class MovieRecommendationDTO {
 
     private Double predictedRating;
     private Double uncertaintyScore;
+    // nearest neighbor (explainability) - optional
+    private UUID nearestMovieId;
+    private String nearestMovieTitle;
+    private String nearestMoviePosterUrl;
 }

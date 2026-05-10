@@ -31,6 +31,7 @@ import AccountMemberPage from "../app/(protected)/account/account-member/page";
 import AccountProfilePage from "../app/(protected)/account/account-profile/page";
 import AccountPasswordPage from "@/app/(protected)/account/account-password/page.jsx";
 import BookingDetailPage from "@/app/(protected)/account/account-history/[bookingId]/page.jsx";
+import MyRatingsPage from "@/app/(protected)/my-ratings/page.jsx";
 
 // Auth
 import LoginPage from "@/app/(auth)/login/page";
@@ -94,6 +95,7 @@ export default function AppRouter() {
 
       {/* ====== PROTECTED MEMBER ROUTES (cần login) ====== */}
       <Route element={<PrivateRoute />}>
+        <Route path="/my-ratings" element={<MyRatingsPage />} />
         <Route
           path="/account/account-history"
           element={<AccountHistoryPage />}

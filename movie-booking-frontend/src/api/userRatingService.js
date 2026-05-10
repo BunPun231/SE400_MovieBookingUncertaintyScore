@@ -17,6 +17,21 @@ export async function getMyRatings() {
   return data.map(mapUserRating);
 }
 
+export async function getMyRatingsPage(page = 0, size = 20) {
+  const p = Number.isFinite(Number(page)) ? Math.max(0, Number(page)) : 0;
+  const s = Number.isFinite(Number(size)) ? Math.max(1, Number(size)) : 20;
+  const res = await apiFetch(`/user-ratings/me/list?page=${p}&size=${s}`);
+  const body = res || {};
+  const items = Array.isArray(body.data) ? body.data.map(mapUserRating) : [];
+  return {
+    items,
+    page: body.page ?? p,
+    size: body.size ?? s,
+    totalElements: body.totalElements ?? 0,
+    totalPages: body.totalPages ?? 0,
+  };
+}
+
 export async function upsertMovieRating(movieId, ratingValue) {
   const payload = {
     movieId,
