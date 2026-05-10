@@ -75,13 +75,18 @@ public class MovieRecommendationService {
             return Collections.emptyList();
         }
 
+        // Load the user's rating profile, which includes their past ratings, the set of movies they've seen, 
+        // and their average rating.
         UserRatingProfile profile = loadUserRatingProfile(userId);
 
+        // Cold-start scenario: If the user has no ratings, 
+        // recommend top-K movies by IMDb rating with max uncertainty.
         if (profile.ratings().isEmpty()) {
             return buildColdStartRecommendations(k);
         }
 
-        AlgorithmParameters algorithmParameters = loadAlgorithmParameters();
+        // For non-cold-start users, generate predictions for unseen movies and recommend top-K based on predicted rating and uncertainty.
+        AlgorithmParameters algorithmParameters = loadAlgorithmParameters(); // Load algorithm parameters such as max dissimilarity and uncertainty threshold from system config.
         List<Movie> candidates = fetchUnseenCandidates(profile.seenMovieIds());
 
         return candidates.parallelStream()
@@ -95,6 +100,7 @@ public class MovieRecommendationService {
                             .uncertaintyScore(prediction.getUncertaintyScore())
                             .build();
                 })
+                // Sort by predicted rating (descending) and then by uncertainty score (ascending), and take the top K.
                 .sorted(Comparator
                         .comparing(MovieRecommendationDTO::getPredictedRating, Comparator.reverseOrder())
                         .thenComparing(MovieRecommendationDTO::getUncertaintyScore))
@@ -107,6 +113,7 @@ public class MovieRecommendationService {
     private RatingPredictionDTO predictRatingInternal(UUID userId, Movie targetMovie, UserRatingProfile profile,
             AlgorithmParameters algorithmParameters) {
 
+        // If user has no ratings, fallback to IMDb-based prediction with max uncertainty.
         if (profile.ratings().isEmpty()) {
             double fallback = mapImdbToFiveStars(targetMovie.getImdbRating());
             return RatingPredictionDTO.builder()
@@ -122,11 +129,15 @@ public class MovieRecommendationService {
                     .build();
         }
 
+        // Find the nearest neighbor movie in the user's rating history based on the lowest dissimilarity score.
         UserRating nearestNeighbor = null;
         double minDissimilarity = Double.MAX_VALUE;
 
+        // Iterate through each of the user's rated movies to find the one most similar to the target movie.
         for (UserRating userRating : profile.ratings()) {
             Movie historicalMovie = userRating.getMovie();
+            // If the historical movie is not found (which should not happen if data integrity is maintained), 
+            // skip this rating.
             if (historicalMovie == null) {
                 continue;
             }
@@ -138,6 +149,7 @@ public class MovieRecommendationService {
             }
         }
 
+        // If no valid nearest neighbor is found (which is unlikely since user has ratings), fallback to IMDb-based prediction.
         if (nearestNeighbor == null) {
             double fallback = mapImdbToFiveStars(targetMovie.getImdbRating());
             return RatingPredictionDTO.builder()
@@ -153,6 +165,8 @@ public class MovieRecommendationService {
                     .build();
         }
 
+        // Compute the raw prediction based on the nearest neighbor's rating, 
+        // then adjust it based on the uncertainty score derived from the dissimilarity.
         double rawPrediction = clampRating(nearestNeighbor.getRatingValue());
         double uncertaintyScore = computeUncertaintyScore(minDissimilarity, algorithmParameters.maxDissimilarity());
         double finalPrediction = rawPrediction;
@@ -177,6 +191,8 @@ public class MovieRecommendationService {
     }
 
     private List<MovieRecommendationDTO> buildColdStartRecommendations(int k) {
+        // For cold-start users with no ratings, 
+        // recommend top-K movies in our db based on IMDb rating with maximum uncertainty score.
         return movieRepo.findTop1000ByStatusOrderByImdbRatingDesc(MovieStatus.SHOWING)
                 .stream()
                 .limit(k)

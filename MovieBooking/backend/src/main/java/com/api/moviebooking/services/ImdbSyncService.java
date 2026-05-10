@@ -46,6 +46,7 @@ public class ImdbSyncService {
     @Value("${imdb.api.base-url:https://api.imdbapi.dev}")
     private String imdbApiBaseUrl;
 
+    // Get a list of IMDb titles based on an optional search query, with a specified limit on the number of results.
     @Transactional(readOnly = true)
     public List<ImdbTitleDTO> getTitlesFromImdb(String query, Integer limit) {
         int normalizedLimit = normalizeLimit(limit);
@@ -93,6 +94,7 @@ public class ImdbSyncService {
         }
     }
 
+    // Sync movie metadata from IMDb by its IMDb ID and upsert into the movies database.
     @Transactional
     public Movie syncMovieByImdbId(String imdbId) {
         if (imdbId == null || imdbId.isBlank()) {

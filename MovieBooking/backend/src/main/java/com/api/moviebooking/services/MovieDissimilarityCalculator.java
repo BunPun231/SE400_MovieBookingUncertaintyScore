@@ -40,16 +40,17 @@ public class MovieDissimilarityCalculator {
         return maxCardinality - intersectionSize;
     }
 
+    // Converts a comma-separated string into a normalized set of lowercase trimmed values.
     private Set<String> splitToNormalizedSet(String csvValue) {
         if (csvValue == null || csvValue.isBlank()) {
             return Collections.emptySet();
         }
 
-        return Arrays.stream(csvValue.split(","))
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .filter(value -> !value.isBlank())
-                .collect(Collectors.toSet());
+        return Arrays.stream(csvValue.split(",")) // 1. Tách chuỗi bằng dấu phẩy
+            .map(String::trim)                // 2. Xóa khoảng trắng thừa ở 2 đầu
+            .map(String::toLowerCase)         // 3. Chuyển hết sang chữ thường
+            .filter(value -> !value.isBlank()) // 4. Loại bỏ các phần tử rỗng
+            .collect(Collectors.toSet());     // 5. Gom lại thành một tập hợp (Set
     }
 
     private double valueOrZero(Number value) {
