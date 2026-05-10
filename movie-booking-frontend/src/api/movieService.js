@@ -24,6 +24,9 @@ function mapMovie(m) {
     minimumAge: m.minimumAge ?? m.minimum_age,
     imdbRating: m.imdbRating ?? m.imdb_rating ?? null,
     releaseDate: m.releaseDate || m.release_date,
+    // region and releaseYear are optional; releaseYear may come separately or derived from releaseDate
+    region: m.region || m.country || m.regionCode || null,
+    releaseYear: m.releaseYear || m.release_year || (m.releaseDate || m.release_date ? new Date(m.releaseDate || m.release_date).getFullYear() : null),
     director: m.director,
     cast: m.cast || m.actors,
     trailerUrl: m.trailerUrl || m.trailer_url,

@@ -1,6 +1,7 @@
 package com.api.moviebooking.controllers;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,24 @@ public class UserRatingController {
         UUID currentUserId = getCurrentUserId();
         List<UserRatingDTO> ratings = userRatingService.getUserRatings(currentUserId);
         return ResponseEntity.ok(ratings);
+    }
+
+    @GetMapping("/me/list")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerToken")
+    @Operation(summary = "Get paged ratings from current user")
+    public ResponseEntity<Map<String, Object>> getMyRatingsPaged(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size) {
+        UUID currentUserId = getCurrentUserId();
+        var pageRes = userRatingService.getUserRatingsPage(currentUserId, page, size);
+        Map<String, Object> body = Map.of(
+                "data", pageRes.getContent(),
+                "page", pageRes.getNumber(),
+                "size", pageRes.getSize(),
+                "totalElements", pageRes.getTotalElements(),
+                "totalPages", pageRes.getTotalPages());
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping

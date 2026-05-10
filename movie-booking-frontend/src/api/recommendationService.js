@@ -7,6 +7,9 @@ function mapRecommendation(row) {
     posterUrl: row?.posterUrl || row?.poster_url || "",
     predictedRating: Number(row?.predictedRating ?? row?.predicted_rating ?? 0),
     uncertaintyScore: Number(row?.uncertaintyScore ?? row?.uncertainty_score ?? 0),
+    nearestMovieId: row?.nearestMovieId || row?.nearest_movie_id || null,
+    nearestMovieTitle: row?.nearestMovieTitle || row?.nearest_movie_title || null,
+    nearestMoviePosterUrl: row?.nearestMoviePosterUrl || row?.nearest_movie_poster_url || null,
   };
 }
 

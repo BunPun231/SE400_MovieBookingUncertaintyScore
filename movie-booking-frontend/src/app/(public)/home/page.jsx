@@ -280,14 +280,24 @@ export default function HomePage() {
               <h2 className="text-lg md:text-xl font-extrabold tracking-[0.18em] uppercase bg-gradient-to-r from-[#43e1ff] via-[#7b5cff] to-[#ff7af6] bg-clip-text text-transparent">
                 Top phim dành cho bạn
               </h2>
-              {!isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => navigate("/my-ratings")}
+                    className="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold bg-white/10 border border-white/20 hover:bg-white/20 transition-all"
+                  >
+                    Phim tôi đã đánh giá
+                  </button>
+                ) : null}
+                {!isAuthenticated ? (
                 <button
                   onClick={() => navigate("/login")}
                   className="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold bg-white/10 border border-white/20 hover:bg-white/20 transition-all"
                 >
                   Đăng nhập
                 </button>
-              ) : null}
+                ) : null}
+              </div>
             </div>
 
             {!isAuthenticated ? (
@@ -338,15 +348,6 @@ export default function HomePage() {
                             </h3>
 
                             <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                              <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#43e1ff22] text-[#43e1ff] border border-[#43e1ff66] font-semibold text-[12px]">
-                                Độ phù hợp: 
-                                <MatchRing
-                                  percentage={matchPercentage}
-                                  compact
-                                  ringColor="#43e1ff"
-                                  valueClass="text-[#43e1ff]"
-                                />
-                              </span>
 
                               <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border font-semibold text-[12px] ${
                                 confidence > 90
@@ -368,6 +369,22 @@ export default function HomePage() {
                                 Dự đoán:
                                 <StarRating rating={predictedRating} />
                               </span>
+
+                              {item.nearestMovieTitle ? (
+                                <span className="w-full block text-sm text-white/70 mt-2">
+                                  Vì bạn đã đánh giá{' '}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (item.nearestMovieId) navigate(`/movie/${item.nearestMovieId}`);
+                                    }}
+                                    className="underline font-semibold text-white hover:text-[#ffe700]"
+                                  >
+                                    {item.nearestMovieTitle}
+                                  </button>
+                                </span>
+                              ) : null}
                             </div>
                           </div>
 
