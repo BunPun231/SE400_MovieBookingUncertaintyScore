@@ -172,7 +172,7 @@ export default function AdminMoviesPage() {
       return;
     }
 
-    const normalizedLimit = Math.min(20, Math.max(1, Number(importLimit) || 20));
+    const normalizedLimit = Math.min(100, Math.max(1, Number(importLimit) || 20));
     const genreList = importGenres.join(", ");
 
     try {
@@ -685,7 +685,7 @@ export default function AdminMoviesPage() {
               setImportLimit(20);
               return;
             }
-            setImportLimit(Math.min(20, Math.max(1, raw)));
+            setImportLimit(Math.min(100, Math.max(1, raw)));
           }}
           onClose={handleCloseMassImportModal}
           onConfirm={handleMassImport}
@@ -1234,12 +1234,12 @@ function MassImportModal({
 
             <div>
               <label className="block text-[11px] font-semibold text-white/60 mb-2 uppercase tracking-[0.18em]">
-                Max items <span className="text-white/30 normal-case">(1-20)</span>
+                Max items <span className="text-white/30 normal-case">(1-100)</span>
               </label>
               <input
                 type="number"
                 min={1}
-                max={20}
+                max={100}
                 value={limit}
                 onChange={onLimitChange}
                 disabled={isImporting}
