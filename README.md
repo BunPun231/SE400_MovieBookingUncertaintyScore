@@ -184,13 +184,13 @@ Backend docs are available in `MovieBooking/backend/docs/`.
 
 Key docs include:
 
-- [API-Authentication.md](backend/docs/API-Authentication.md)
-- [API-Bookings.md](backend/docs/API-Bookings.md)
-- [API-Checkout.md](backend/docs/API-Checkout.md)
-- [API-Movies.md](backend/docs/API-Movies.md)
-- [API-Payments.md](backend/docs/API-Payments.md)
-- [API-Promotions.md](backend/docs/API-Promotions.md)
-- [API-Showtimes.md](backend/docs/API-Showtimes.md)
+- [API-Authentication.md](MovieBooking/backend/docs/API-Authentication.md)
+- [API-Bookings.md](MovieBooking/backend/docs/API-Bookings.md)
+- [API-Checkout.md](MovieBooking/backend/docs/API-Checkout.md)
+- [API-Movies.md](MovieBooking/backend/docs/API-Movies.md)
+- [API-Payments.md](MovieBooking/backend/docs/API-Payments.md)
+- [API-Promotions.md](MovieBooking/backend/docs/API-Promotions.md)
+- [API-Showtimes.md](MovieBooking/backend/docs/API-Showtimes.md)
 
 ## Notes
 
